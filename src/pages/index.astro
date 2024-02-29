@@ -8,6 +8,7 @@
 		<p id="hello">
 			<span id="final_span"></span>
 			<span id="interim_span" style="color: gray;"></span>
+			<b><span id="speech_continuation_span" style="color: green;"></span></b>
 		</p>
 	</div>
 </div>
@@ -67,6 +68,14 @@
 			console.log(hello.innerText)
 		}
 	}
+
+	function updateGeneratedSpeech(){
+		let randomNumber = Math.random();
+		speech_continuation_span.innerHTML = " " + randomNumber
+	}
+
+
+	setInterval(updateGeneratedSpeech, 3000);
 
 	function reset() {
 		recognizing = false;
