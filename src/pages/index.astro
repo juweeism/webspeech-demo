@@ -69,13 +69,48 @@
 		}
 	}
 
-	function updateGeneratedSpeech(){
-		let randomNumber = Math.random();
-		speech_continuation_span.innerHTML = " " + randomNumber
+	
+	async function getSpeechSuggestion() {
+	    const speechData = {
+        	excerpt: final_span.innerHTML,
+			previous_suggestion: speech_continuation_span.innerHTML
+    	};
+		if(speechData.excerpt == null || speechData.excerpt == ""){
+			console.log("You haven't started speaking.");
+			return;
+		}
+		console.log("Sending request now...",speechData.excerpt);
+    	try {
+        	const response = await fetch('http://192.168.0.23:8080/generate_speech', {
+            	method: 'POST',
+            	headers: {
+                	'Content-Type': 'application/json',
+            	},
+            	body: JSON.stringify(speechData),
+        	});
+
+        	const data = await response.json();
+        	console.log('Response:', data);
+			console.log('Keys:', Object.keys(data));
+			speech_continuation_span.innerHTML = JSON.parse(data).next_sentence;
+        	//return data["next_sentences"];
+    	} catch (error) {
+        	console.error('Error:', error);
+        		// Handle errors
+    	}
 	}
 
+	async function updateGeneratedSpeech() {
+    	try {
+        	let suggestion = await getSpeechSuggestion();
+        	console.log("suggestion: ", suggestion);
+        	speech_continuation_span.innerHTML = suggestion;
+    	} catch (error) {
+        	console.error('Error updating generated speech:', error);
+    	}
+	}
 
-	setInterval(updateGeneratedSpeech, 3000);
+	setInterval(getSpeechSuggestion, 10000);
 
 	function reset() {
 		recognizing = false;
