@@ -1,8 +1,12 @@
 ---
-
 ---
 
+
 <div>
+	<div style="margin: 0 auto; max-width: 700px; padding: 3rem">
+		<textarea id="myInputField" rows="4" cols="50" oninput="handleInput(event)"></textarea>
+	</div>
+
 	<div style="margin: 0 auto; max-width: 700px;">
 		<button class="record" onclick="toggleStartStop()">record</button>
 		<p id="hello">
@@ -15,10 +19,17 @@
 
 
 <script type="text/javascript" is:inline>
+	let topic = ""
+	function handleInput(event) {
+    	const inputField = event.target;
+    	const inputText = inputField.value;
+		topic = inputField.value;
+    	console.log("Input text:", inputText);
+    	// Your code here that uses the inputText
+  	}
 
 	const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 	const recordButton = document.querySelector('button.record');
-
 	let recognizing = false;
 	let recognition = new SpeechRecognition();
 	recognition.continuous = true;
@@ -69,9 +80,13 @@
 		}
 	}
 
-	
 	async function getSpeechSuggestion() {
+		if(!recognizing){
+			console.log('Not recognizing...');
+			return;
+		}
 	    const speechData = {
+			topic: topic,
         	excerpt: final_span.innerHTML,
 			previous_suggestion: speech_continuation_span.innerHTML
     	};
@@ -80,24 +95,55 @@
 			return;
 		}
 		console.log("Sending request now...",speechData.excerpt);
-    	try {
-        	const response = await fetch('http://192.168.0.23:8080/generate_speech', {
-            	method: 'POST',
-            	headers: {
-                	'Content-Type': 'application/json',
-            	},
-            	body: JSON.stringify(speechData),
-        	});
+    	//try {
+        	//const response = await fetch('http://192.168.68.142:8080/generate_speech', {
+            //	method: 'POST',
+            //	headers: {
+            //    	'Content-Type': 'application/json',
+            //	},
+            //	body: JSON.stringify(speechData),
+        	//});
 
-        	const data = await response.json();
-        	console.log('Response:', data);
-			console.log('Keys:', Object.keys(data));
-			speech_continuation_span.innerHTML = JSON.parse(data).next_sentence;
+        	//const data = await response.json();
+        	//console.log('Response:', data);
+			//console.log('Keys:', Object.keys(data));
+			//speech_continuation_span.innerHTML = JSON.parse(data).next_sentence;
         	//return data["next_sentences"];
-    	} catch (error) {
-        	console.error('Error:', error);
-        		// Handle errors
-    	}
+			fetch('http://192.168.68.142:8080/generate_speech_async',{
+				method: 'POST',
+				headers:{
+					'Content-Type':'application/json',
+				},
+				body: JSON.stringify(speechData),
+			})
+			.then(response => {
+				if(!response.ok){
+					throw new Error('Network response not ok');
+				}
+				const reader = response.body.getReader();
+				function readStream(){
+					reader.read().then(({done,value})=>{
+						if(done){
+							console.log('Stream has ended');
+							return;
+						}
+						const text = new TextDecoder().decode(value);
+						speech_continuation_span.innerHTML = text;
+						console.log('Received chunk:',text);
+						
+						readStream();
+					}).catch(error=>{
+						console.error('Error reading from stream:',error);
+					});
+				}
+				readStream();
+			})
+			.catch(error=>
+				console.error('Error sending post request:',error)
+			)
+    	//} catch (error) {
+        //	console.error('Error:', error);
+    	//}
 	}
 
 	async function updateGeneratedSpeech() {
